@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Study Planner{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Stats row ─────────────────────────────── */
+  .stat-card {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 100%;
+  }
+  .stat-icon {
+    width: 46px; height: 46px;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+  .stat-icon.indigo  { background: #eef2ff; color: #4f46e5; }
+  .stat-icon.rose    { background: #fff1f2; color: #e11d48; }
+  .stat-icon.amber   { background: #fffbeb; color: #d97706; }
+  .stat-icon.green   { background: #f0fdf4; color: #16a34a; }
+  .stat-label { font-size: .75rem; color: var(--text-muted); font-weight: 500; margin-bottom: 2px; }
+  .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text-main); }
+
+  /* ── Notification panel ─────────────────── */
+  .notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: .85rem;
+  }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    font-size: .85rem;
+  }
+  .notif-icon.overdue  { background: #fee2e2; color: #dc2626; }
+  .notif-icon.soon     { background: #fef3c7; color: #d97706; }
+
+  /* ── Add task form card ─────────────────── */
+  .section-heading {
+    font-size: .8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .form-label-sm { font-size: .82rem; font-weight: 500; color: var(--text-main); }
+  .form-control-sm-custom {
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: .875rem;
+    padding: 8px 10px;
+    width: 100%;
+    outline: none;
+    transition: border .15s, box-shadow .15s;
+    background: #fff;
+    color: var(--text-main);
+  }
+  .form-control-sm-custom:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.15);
+  }
+  .btn-add {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: .875rem;
+    font-weight: 600;
+    width: 100%;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+  .btn-add:hover  { background: #4338ca; transform: translateY(-1px); }
+  .btn-add:active { transform: translateY(0); }
+
+  /* ── Schedule table ─────────────────────── */
+  .schedule-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background .1s;
+  }
+  .schedule-row:last-child { border-bottom: none; }
+  .schedule-row:hover { background: #f8fafc; }
+
+  .time-block {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .time-block .time-end { color: #94a3b8; font-weight: 400; }
+
+  .task-info .task-name {
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 4px;
+  }
+  .task-info .badges { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  .badge-pill {
+    font-size: .68rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .task-actions { display: flex; gap: 5px; }
+  .btn-icon {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: none;
+    display: grid; place-items: center;
+    cursor: pointer;
+    font-size: .8rem;
+    transition: background .15s;
+  }
+  .btn-icon.done   { background: #dcfce7; color: #16a34a; }
+  .btn-icon.del    { background: #fee2e2; color: #dc2626; }
+  .btn-icon.done:hover { background: #bbf7d0; }
+  .btn-icon.del:hover  { background: #fecaca; }
+
+  /* ── Duration bar ───────────────────────── */
+  .duration-bar-wrap {
+    height: 4px;
+    background: #f1f5f9;
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+    width: 100%;
+  }
+  .duration-bar {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* ── Empty state ────────────────────────── */
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .empty-state i { font-size: 2.5rem; opacity: .3; margin-bottom: 10px; display: block; }
+  .empty-state p { font-size: .875rem; margin: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ───── Stats row ───── #}
+{% set total    = schedule | length %}
+{% set overdue_count = overdue | length %}
+{% set soon_count    = due_soon | length %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon indigo"><i class="bi bi-list-task"></i></div>
+      <div>
+        <div class="stat-label">Scheduled Tasks</div>
+        <div class="stat-value">{{ total }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon rose"><i class="bi bi-exclamation-circle"></i></div>
+      <div>
+        <div class="stat-label">Overdue</div>
+        <div class="stat-value">{{ overdue_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon amber"><i class="bi bi-clock-history"></i></div>
+      <div>
+        <div class="stat-label">Due in 24 h</div>
+        <div class="stat-value">{{ soon_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="bi bi-check2-circle"></i></div>
+      <div>
+        <div class="stat-label">On Track</div>
+        <div class="stat-value">{{ [total - overdue_count - soon_count, 0] | max }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ───── Notification panel ───── #}
+{% if overdue or due_soon %}
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-bell-fill text-warning"></i>
+    Notifications &amp; Reminders
+    <span class="badge bg-danger ms-1">{{ overdue_count + soon_count }}</span>
+  </div>
+  <div class="card-body px-4 py-2">
+
+    {% for task in overdue %}
+    <div class="notif-item">
+      <div class="notif-icon overdue"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div>
+        <strong>{{ task.task_name }}</strong>
+        <span class="badge badge-pill badge-priority-high ms-1">Overdue</span>
+        <div class="text-muted" style="font-size:.75rem">
+          {{ task.task_type }} · Deadline was
+          <strong>{{ task.deadline | replace("T", " ") }}</strong>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% for task in due_soon %}
+    <div class="notif-item">
+      <div class="notif-icon soon"><i class="bi bi-alarm-fill"></i></div>
+      <div>
+        <strong>{{ task.task_name }}</strong>
+        <span class="badge badge-pill badge-priority-medium ms-1">Due Soon</span>
+        <div class="text-muted" style="font-size:.75rem">
+          {{ task.task_type }} · Due
+          <strong>{{ task.deadline | replace("T", " ") }}</strong>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+{% endif %}
+
+{# ───── Split-screen: Add Task | Schedule ───── #}
+<div class="row g-4">
+
+  <!-- ════ LEFT: Add Task Form ════ -->
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-plus-circle-fill" style="color:var(--accent)"></i>
+        Add New Task
+      </div>
+      <div class="card-body p-4">
+
+        <!--
+          Data flow:
+          User fills in form → POST /add_task →
+          app.py validates fields → inserts row into `tasks` table →
+          redirect to /dashboard → generate_schedule() re-runs →
+          updated schedule renders here
+        -->
+        <form action="{{ url_for('add_task') }}" method="POST" novalidate>
+
+          <div class="mb-3">
+            <label class="form-label-sm" for="task_name">Task Name *</label>
+            <input
+              type="text"
+              id="task_name"
+              name="task_name"
+              class="form-control-sm-custom"
+              placeholder="e.g. Calculus Chapter 5 Review"
+              required
+            />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label-sm" for="task_type">Task Type</label>
+            <select id="task_type" name="task_type" class="form-control-sm-custom">
+              <option value="Assignment">📝 Assignment</option>
+              <option value="Quiz">❓ Quiz</option>
+              <option value="Exam">📋 Exam</option>
+              <option value="Other">📌 Other</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label-sm" for="deadline">Deadline *</label>
+            <input
+              type="datetime-local"
+              id="deadline"
+              name="deadline"
+              class="form-control-sm-custom"
+              required
+            />
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label-sm">Priority Level</label>
+            <!-- Visual radio button group -->
+            <div class="d-flex gap-2 mt-1">
+              {% for level, color, icon in [
+                  ('High',   '#fee2e2', '🔴'),
+                  ('Medium', '#fef3c7', '🟡'),
+                  ('Low',    '#dcfce7', '🟢')
+              ] %}
+              <label
+                class="flex-fill text-center py-2 px-1 rounded-3 border"
+                style="cursor:pointer; font-size:.8rem; font-weight:600;"
+                id="label_{{ level }}"
+              >
+                <input
+                  type="radio"
+                  name="priority"
+                  value="{{ level }}"
+                  class="d-none priority-radio"
+                  {% if level == 'Medium' %}checked{% endif %}
+                  data-bg="{{ color }}"
+                />
+                {{ icon }} {{ level }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="submit" class="btn-add">
+            <i class="bi bi-plus-lg me-1"></i>Add to Schedule
+          </button>
+        </form>
+
+        <!-- Scheduling engine info blurb -->
+        <div class="mt-4 p-3 rounded-3" style="background:#f8fafc; font-size:.78rem; color:var(--text-muted); line-height:1.6;">
+          <i class="bi bi-cpu me-1" style="color:var(--accent)"></i>
+          <strong style="color:var(--text-main)">Auto-Scheduler</strong> re-generates your study blocks
+          every time you add or complete a task, sorted by
+          <em>priority → earliest deadline</em>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ RIGHT: Generated Schedule ════ -->
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-calendar2-week-fill" style="color:var(--accent)"></i>
+          Auto-Generated Study Schedule
+        </div>
+        {% if schedule %}
+        <span class="badge rounded-pill" style="background:var(--accent-light); color:var(--accent); font-size:.75rem;">
+          {{ total }} block{{ 's' if total != 1 }}
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Column headers -->
+      {% if schedule %}
+      <div class="px-4 py-2 d-flex gap-3"
+           style="font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); border-bottom:1px solid #f1f5f9;">
+        <span style="width:90px">Time Slot</span>
+        <span class="flex-grow-1">Task Details</span>
+        <span>Actions</span>
+      </div>
+      {% endif %}
+
+      <div class="card-body p-0">
+        {% if schedule %}
+
+          {% for item in schedule %}
+          {% set task     = item.task %}
+          {% set priority = task.priority %}
+          {% set ttype    = task.task_type %}
+
+          {# Map priority and type to CSS classes #}
+          {% set p_class = {
+              'High':   'badge-priority-high',
+              'Medium': 'badge-priority-medium',
+              'Low':    'badge-priority-low'
+          }.get(priority, 'badge-priority-low') %}
+
+          {% set t_class = {
+              'Assignment': 'badge-type-assignment',
+              'Quiz':       'badge-type-quiz',
+              'Exam':       'badge-type-exam',
+              'Other':      'badge-type-other'
+          }.get(ttype, 'badge-type-other') %}
+
+          {# Duration bar: max shown block = 120 min (Exam) #}
+          {% set bar_pct = [(item.duration / 120 * 100), 100] | min %}
+
+          <div class="schedule-row">
+
+            <!-- Time column -->
+            <div class="time-block">
+              {{ item.scheduled_start.split('·')[1] | trim if '·' in item.scheduled_start else item.scheduled_start }}
+              <div class="time-end">→ {{ item.scheduled_end }}</div>
+              <div class="duration-bar-wrap">
+                <div class="duration-bar" style="width:{{ bar_pct }}%"></div>
+              </div>
+            </div>
+
+            <!-- Task info column -->
+            <div class="task-info">
+              <div class="task-name">{{ task.task_name }}</div>
+              <div class="badges">
+                <span class="badge-pill badge-pill {{ t_class }}">{{ ttype }}</span>
+                <span class="badge-pill badge-pill {{ p_class }}">{{ priority }}</span>
+                <span class="badge-pill" style="background:#f1f5f9; color:#475569; font-size:.68rem; padding:2px 8px; border-radius:20px; font-weight:600;">
+                  <i class="bi bi-clock me-1"></i>{{ item.duration }} min
+                </span>
+              </div>
+              <div class="mt-1" style="font-size:.75rem; color:var(--text-muted);">
+                <i class="bi bi-calendar3 me-1"></i>
+                Deadline: {{ task.deadline | replace("T"," ") }}
+              </div>
+            </div>
+
+            <!-- Action buttons column -->
+            <div class="task-actions">
+              <!-- POST /complete_task/<id> — marks task as Completed -->
+              <form action="{{ url_for('complete_task', task_id=task.id) }}" method="POST">
+                <button type="submit" class="btn-icon done" title="Mark complete">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+              </form>
+              <!-- POST /delete_task/<id> — removes task + schedule row -->
+              <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST"
+                    onsubmit="return confirm('Delete this task?')">
+                <button type="submit" class="btn-icon del" title="Delete task">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </form>
+            </div>
+
+          </div>
+          {% endfor %}
+
+        {% else %}
+        <!-- Empty state when no tasks exist -->
+        <div class="empty-state">
+          <i class="bi bi-calendar-x"></i>
+          <p><strong>No tasks scheduled yet.</strong><br>
+          Add your first task using the form on the left.</p>
+        </div>
+        {% endif %}
+      </div><!-- /.card-body -->
+    </div><!-- /.card -->
+  </div>
+
+</div><!-- /.row -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // ── Priority radio: visual highlight on selection ──────────────
+  document.querySelectorAll('.priority-radio').forEach(function(radio) {
+    // Set initial state for checked radio
+    if (radio.checked) {
+      radio.closest('label').style.background = radio.dataset.bg;
+      radio.closest('label').style.borderColor = '#94a3b8';
+    }
+
+    radio.addEventListener('change', function() {
+      // Reset all labels
+      document.querySelectorAll('.priority-radio').forEach(function(r) {
+        r.closest('label').style.background   = '';
+        r.closest('label').style.borderColor  = '#dee2e6';
+      });
+      // Highlight the selected one
+      if (this.checked) {
+        this.closest('label').style.background  = this.dataset.bg;
+        this.closest('label').style.borderColor = '#94a3b8';
+      }
+    });
+  });
+
+  // ── Set minimum deadline to right now ──────────────────────────
+  (function() {
+    var dl = document.getElementById('deadline');
+    if (dl) {
+      var now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      dl.min = now.toISOString().slice(0, 16);
+    }
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Calendar — Study Planner Premium{% endblock %}
+{% block page_title %}📅 Study Calendar{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<!-- FullCalendar -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<style>
+  .premium-banner {
+    background: linear-gradient(135deg, #0c4a6e 0%, #075985 50%, #0369a1 100%);
+    border-radius: 16px;
+    padding: 20px 28px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .premium-banner::before {
+    content:'';
+    position:absolute; top:-40px; right:-40px;
+    width:180px; height:180px; border-radius:50%;
+    background:rgba(255,255,255,.05);
+  }
+  .premium-badge {
+    background: #f59e0b; color: #fff;
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem; font-weight: 500;
+    padding: 4px 10px; border-radius: 6px; letter-spacing: 1px;
+  }
+  .banner-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.35rem; font-weight: 800; margin: 6px 0 4px;
+  }
+  .banner-sub { font-size: .82rem; opacity: .65; }
+
+  .cal-wrap {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+
+  /* FullCalendar overrides to match app theme */
+  .fc .fc-toolbar-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .fc .fc-button {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    border-radius: 8px !important;
+    font-family: 'Sora', sans-serif !important;
+    font-size: .8rem !important;
+    font-weight: 600 !important;
+    padding: 6px 14px !important;
+    transition: opacity .15s !important;
+  }
+  .fc .fc-button:hover { opacity: .85 !important; }
+  .fc .fc-button-active { opacity: .7 !important; }
+  .fc-daygrid-day-number, .fc-col-header-cell-cushion {
+    font-family: 'DM Mono', monospace !important;
+    font-size: .8rem !important;
+    color: #64748b !important;
+    text-decoration: none !important;
+  }
+  .fc-daygrid-day.fc-day-today { background: #eef2ff !important; }
+  .fc-event {
+    border-radius: 6px !important;
+    border: none !important;
+    font-family: 'Sora', sans-serif !important;
+    font-size: .75rem !important;
+    font-weight: 600 !important;
+    padding: 2px 6px !important;
+    cursor: pointer;
+  }
+  .fc-event:hover { filter: brightness(1.1); }
+
+  /* Event detail popup */
+  .event-popup {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 260px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.15);
+    font-family: 'Sora', sans-serif;
+  }
+  .event-popup.visible { display: block; }
+  .popup-title { font-weight: 700; font-size: .95rem; color: #0f172a; margin-bottom: 10px; }
+  .popup-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .8rem; color: #64748b; margin-bottom: 6px;
+  }
+  .popup-row i { width: 16px; color: #4f46e5; }
+  .popup-close {
+    position: absolute; top: 12px; right: 14px;
+    background: none; border: none; cursor: pointer;
+    font-size: 1rem; color: #94a3b8;
+  }
+  .popup-close:hover { color: #0f172a; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'DM Mono', monospace; font-size: .72rem; color: #64748b;
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="premium-banner">
+  <div style="position:relative;z-index:1">
+    <div class="premium-badge">✦ PREMIUM</div>
+    <div class="banner-title">Study Calendar</div>
+    <div class="banner-sub">All your study sessions laid out visually. Never miss a block.</div>
+  </div>
+  <div style="position:relative;z-index:1; text-align:right;">
+    <a href="{{ url_for('dashboard') }}"
+       style="background:rgba(255,255,255,.15); color:#fff; padding:8px 16px; border-radius:8px; font-size:.82rem; text-decoration:none; font-family:'Sora',sans-serif; font-weight:600;">
+      <i class="bi bi-plus-lg me-1"></i>Add Task
+    </a>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#4f46e5"></div> Assignment</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> Quiz</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div> Exam</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0891b2"></div> Other</div>
+</div>
+
+<div class="cal-wrap">
+  <div id="calendar"></div>
+</div>
+
+<!-- Event detail popup -->
+<div class="event-popup" id="eventPopup">
+  <button class="popup-close" onclick="closePopup()"><i class="bi bi-x-lg"></i></button>
+  <div class="popup-title" id="popupTitle"></div>
+  <div class="popup-row"><i class="bi bi-tag-fill"></i><span id="popupType"></span></div>
+  <div class="popup-row"><i class="bi bi-flag-fill"></i><span id="popupPriority"></span></div>
+  <div class="popup-row"><i class="bi bi-calendar3"></i><span id="popupDeadline"></span></div>
+  <div class="popup-row"><i class="bi bi-clock"></i><span id="popupTime"></span></div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const EVENTS = {{ events_json | safe }};
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const calEl = document.getElementById('calendar');
+
+    const calendar = new FullCalendar.Calendar(calEl, {
+      initialView: 'dayGridMonth',
+      headerToolbar: {
+        left:   'prev,next today',
+        center: 'title',
+        right:  'dayGridMonth,timeGridWeek,timeGridDay'
+      },
+      events: EVENTS,
+      height: 'auto',
+      eventClick: function(info) {
+        const ep = info.event.extendedProps;
+        const el = document.getElementById('eventPopup');
+
+        document.getElementById('popupTitle').textContent    = info.event.title;
+        document.getElementById('popupType').textContent     = ep.type;
+        document.getElementById('popupPriority').textContent = ep.priority + ' Priority';
+        document.getElementById('popupDeadline').textContent = 'Due: ' + (ep.deadline || '—').replace('T',' ');
+        document.getElementById('popupTime').textContent     =
+          (info.event.start ? info.event.start.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '')
+          + ' → '
+          + (info.event.end   ? info.event.end.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '');
+
+        // Position near click
+        const rect = info.el.getBoundingClientRect();
+        el.style.top  = (rect.bottom + window.scrollY + 8) + 'px';
+        el.style.left = Math.min(rect.left, window.innerWidth - 280) + 'px';
+        el.classList.add('visible');
+      }
+    });
+
+    calendar.render();
+
+    // Close popup on outside click
+    document.addEventListener('click', function(e) {
+      const popup = document.getElementById('eventPopup');
+      if (!popup.contains(e.target) && !e.target.closest('.fc-event')) {
+        popup.classList.remove('visible');
+      }
+    });
+  });
+
+  function closePopup() {
+    document.getElementById('eventPopup').classList.remove('visible');
+  }
+</script>
+{% endblock %}
